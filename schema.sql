@@ -4,7 +4,8 @@ SET NAMES utf8mb4;
 
 CREATE TABLE IF NOT EXISTS users (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  google_sub    VARCHAR(64)  NOT NULL,
+  google_sub    VARCHAR(64)  NULL,
+  password_hash VARCHAR(255) NULL,
   email         VARCHAR(255) NOT NULL,
   name          VARCHAR(150) NULL,
   avatar        VARCHAR(500) NULL,
@@ -16,8 +17,8 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_users_google_sub (google_sub),
+  UNIQUE KEY uq_users_email (email),
   UNIQUE KEY uq_users_referral_code (referral_code),
-  KEY idx_users_email (email),
   KEY idx_users_referred_by (referred_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

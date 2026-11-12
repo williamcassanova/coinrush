@@ -3,11 +3,12 @@ const API_BASE = RAW_API_BASE.startsWith('__') ? '' : RAW_API_BASE;
 const API = `${API_BASE}/api`;
 const NATIVE = Boolean(window.Capacitor?.isNativePlatform?.());
 const RETURN_SCHEME = 'com.coingame.coinrush';
+const AD_TEST = window.CQ_AD_TEST !== false;
 const REWARDED_AD_ID = (() => {
   const v = String(window.CQ_REWARDED_AD_ID || '');
+  if (AD_TEST) return 'ca-app-pub-3940256099942544/5224354917';
   return !v || v.startsWith('__') ? 'ca-app-pub-3940256099942544/5224354917' : v;
 })();
-const AD_TEST = window.CQ_AD_TEST !== false;
 const LS_TOKEN = 'cq_token';
 const LS_USER = 'cq_user';
 const LS_REF = 'cq_ref';
@@ -28,6 +29,7 @@ const fmt = (n) => Number(n || 0).toLocaleString('id-ID');
 
 let deferredInstallPrompt = null;
 let installedThisSession = false;
+let authMode = 'login';
 
 function isStandalone() {
   return (
@@ -1034,6 +1036,20 @@ function waitForGoogle(timeoutMs = 12000) {
   });
 }
 
+async function completeAuth(data) {
+  store.token = data.token;
+  store.user = data.user;
+  store.config = data.config;
+  localStorage.setItem(LS_TOKEN, data.token);
+  localStorage.removeItem(LS_REF);
+  saveUser();
+  showApp();
+  await loadState();
+  $('loginMsg').textContent = '';
+  startHeartbeat();
+  switchTab('home');
+}
+
 async function handleCredential(response) {
   const msg = $('loginMsg');
   msg.className = 'msg';
@@ -1044,17 +1060,58 @@ async function handleCredential(response) {
       method: 'POST',
       body: JSON.stringify({ credential: response.credential, referralCode }),
     });
-    store.token = data.token;
-    store.user = data.user;
-    store.config = data.config;
-    localStorage.setItem(LS_TOKEN, data.token);
-    localStorage.removeItem(LS_REF);
-    saveUser();
+    await completeAuth(data);
+  } catch (err) {
+    msg.className = 'msg error';
+    msg.textContent = err.message;
+  }
+}
 
-    showApp();
-    await loadState();
-    msg.textContent = '';
-    startHeartbeat();
+function setAuthMode(mode) {
+  authMode = mode === 'register' ? 'register' : 'login';
+  const isRegister = authMode === 'register';
+  $('nameField').classList.toggle('hidden', !isRegister);
+  $('authSubmit').textContent = isRegister ? 'Daftar' : 'Masuk';
+  $('authPassword').autocomplete = isRegister ? 'new-password' : 'current-password';
+  $('tabLogin').classList.toggle('active', !isRegister);
+  $('tabRegister').classList.toggle('active', isRegister);
+  $('tabLogin').setAttribute('aria-selected', String(!isRegister));
+  $('tabRegister').setAttribute('aria-selected', String(isRegister));
+  $('loginMsg').textContent = '';
+  $('loginMsg').className = 'msg';
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  const msg = $('loginMsg');
+  msg.className = 'msg';
+  msg.textContent = '';
+
+  const email = $('authEmail').value.trim();
+  const password = $('authPassword').value;
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    msg.className = 'msg error';
+    msg.textContent = 'Email tidak valid';
+    return;
+  }
+  if (password.length < 8) {
+    msg.className = 'msg error';
+    msg.textContent = 'Password minimal 8 karakter';
+    return;
+  }
+
+  const body = { email, password };
+  if (authMode === 'register') {
+    body.name = $('authName').value.trim();
+    body.referralCode = localStorage.getItem(LS_REF) || undefined;
+  }
+
+  msg.textContent = authMode === 'register' ? 'Membuat akun...' : 'Masuk...';
+  try {
+    const path = authMode === 'register' ? '/auth/register' : '/auth/login';
+    const data = await api(path, { method: 'POST', body: JSON.stringify(body) });
+    await completeAuth(data);
   } catch (err) {
     msg.className = 'msg error';
     msg.textContent = err.message;
@@ -1154,6 +1211,10 @@ async function initNativeLinks() {
 
 function bindUi() {
   $('logout').addEventListener('click', logout);
+  $('authForm').addEventListener('submit', handleAuthSubmit);
+  $('tabLogin').addEventListener('click', () => setAuthMode('login'));
+  $('tabRegister').addEventListener('click', () => setAuthMode('register'));
+  setAuthMode('login');
   $('playBtn').addEventListener('click', startRound);
   $('spinBtn').addEventListener('click', spinWheel);
   $('copyRef').addEventListener('click', copyReferral);
