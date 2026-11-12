@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Coinrush
 
 on:
   workflow_dispatch:
@@ -8,17 +8,21 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
-      - uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
       - name: Install dependencies
@@ -26,23 +30,52 @@ jobs:
 
       - name: Inject runtime config
         env:
-          API_BASE_URL: ${{ vars.API_BASE_URL }}
-          REWARDED_AD_ID: ${{ vars.REWARDED_AD_ID }}
-          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
-          AD_TEST: ${{ vars.AD_TEST }}
+          API_BASE_URL: https://localhost-0.tail5bd7b7.ts.net
+          ADMOB_APP_ID: ca-app-pub-9652943365143964~2114970865
+          REWARDED_AD_ID: ca-app-pub-9652943365143964/1296713218
+          AD_TEST: 'true'
         run: |
-          if [ -n "$API_BASE_URL" ]; then sed -i "s|__API_BASE__|$API_BASE_URL|g" public/config.js; fi
-          if [ -n "$REWARDED_AD_ID" ]; then sed -i "s|__REWARDED_AD_ID__|$REWARDED_AD_ID|g" public/config.js; fi
-          if [ "$AD_TEST" = "false" ]; then sed -i "s|window.CQ_AD_TEST = true;|window.CQ_AD_TEST = false;|" public/config.js; fi
-          echo '--- config.js ---'
-          cat public/config.js
+          set -e
+
+          CONFIG="public/config.js"
+
+          test -f "$CONFIG" || {
+            echo "::error::config.js tidak ditemukan"
+            exit 1
+          }
+
+          export API_BASE_URL ADMOB_APP_ID REWARDED_AD_ID AD_TEST
+
+          node <<'NODE'
+          const fs = require('fs');
+          const file = 'public/config.js';
+          let config = fs.readFileSync(file, 'utf8');
+
+          const values = {
+            '__API_BASE__': process.env.API_BASE_URL,
+            '__ADMOB_APP_ID__': process.env.ADMOB_APP_ID,
+            '__REWARDED_AD_ID__': process.env.REWARDED_AD_ID
+          };
+
+          for (const [key, value] of Object.entries(values)) {
+            config = config.split(key).join(value);
+          }
+
+          config = config.replace(
+            /window\.CQ_AD_TEST\s*=\s*(true|false);/,
+            `window.CQ_AD_TEST = ${process.env.AD_TEST === 'false' ? 'false' : 'true'};`
+          );
+
+          fs.writeFileSync(file, config);
+          console.log('Konfigurasi CoinRush berhasil diterapkan.');
+          NODE
 
       - name: Add Android platform
         run: npx cap add android
 
       - name: Patch Android config
         env:
-          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+          ADMOB_APP_ID: ca-app-pub-9652943365143964~2114970865
         run: node scripts/patch-android.mjs
 
       - name: Sync web assets
@@ -51,7 +84,8 @@ jobs:
       - name: Build debug APK
         run: |
           chmod +x android/gradlew
-          cd android && ./gradlew assembleDebug --no-daemon --stacktrace
+          cd android
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
