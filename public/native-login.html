@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Login - Coin Rush</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+    <section class="login-screen">
+      <div class="login-card">
+        <h1>Coin <em>Rush</em></h1>
+        <p class="muted">Selesaikan login untuk masuk ke aplikasi.</p>
+        <div id="gsiButton" class="gsi"></div>
+        <a id="openApp" class="primary big hidden" href="#" style="margin-top:14px;display:block;text-align:center;text-decoration:none">Buka aplikasi</a>
+        <p id="msg" class="msg center"></p>
+      </div>
+    </section>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script type="module" src="/native-login.js"></script>
+  </body>
+</html>

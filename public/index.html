@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#070a12" />
+    <title>Coin Rush</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+
+    <section id="login" class="login-screen">
+      <div class="login-card">
+        <div class="orbit"><div class="coin-hero">₵</div></div>
+        <h1>Coin <em>Rush</em></h1>
+        <p class="muted">Tangkap coin, putar roda, lalu cairkan hadiahnya.</p>
+        <div id="gsiButton" class="gsi"></div>
+        <p id="loginMsg" class="msg"></p>
+        <p class="muted tiny">Masuk dengan Google untuk menyimpan progres dan saldo.</p>
+      </div>
+    </section>
+
+    <section id="app" class="app hidden">
+      <main class="content">
+        <section class="page" data-page="home">
+          <header class="topbar">
+            <div class="who">
+              <img id="avatar" class="avatar" alt="" />
+              <div>
+                <div id="name" class="who-name">Pemain</div>
+                <div class="live"><i></i><span id="online">0</span> online</div>
+              </div>
+            </div>
+            <button id="logout" class="icon-btn" title="Keluar" aria-label="Keluar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+            </button>
+          </header>
+
+          <div class="balance-card">
+            <div class="balance-glow"></div>
+            <div class="balance-top">
+              <span class="chip">SALDO</span>
+              <span class="chip soft" id="capChip">0 / 0 hari ini</span>
+            </div>
+            <div class="balance-value"><span class="coin-badge">₵</span><span id="balance">0</span></div>
+            <div class="balance-sub">≈ <span id="balanceIdr">Rp0</span></div>
+            <div class="cap-track"><div id="capBar" class="cap-fill"></div></div>
+            <div class="cap-label">Coin harian <span id="earnedToday">0</span> / <span id="dailyCap">0</span></div>
+          </div>
+
+          <div class="game-card">
+            <div class="game-head">
+              <div>
+                <div class="game-title">Coin Rush</div>
+                <div class="muted tiny">Geser keranjang, tangkap coin, hindari bom.</div>
+              </div>
+              <div class="hud">
+                <div><span id="hudTime">0</span><small>detik</small></div>
+                <div><span id="hudScore">0</span><small>tangkap</small></div>
+              </div>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="gameCanvas"></canvas>
+              <div id="gameOverlay" class="game-overlay">
+                <button id="playBtn" class="play-btn">Mulai main</button>
+                <div class="muted tiny" id="roundsLeftLabel">Sisa ronde 0</div>
+              </div>
+            </div>
+            <div id="gameMsg" class="msg"></div>
+          </div>
+        </section>
+
+        <section class="page hidden" data-page="missions">
+          <h2 class="page-title">Misi harian</h2>
+          <p class="muted small">Selesaikan misi untuk coin ekstra. Reset setiap hari.</p>
+
+          <div class="bonus-card" id="installBonus">
+            <div class="bonus-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
+            </div>
+            <div class="bonus-info">
+              <div class="bonus-title">Bonus Download Aplikasi</div>
+              <div class="muted tiny" id="installBonusDesc">Install Coin Rush, dapat 11.500 coin gratis (sekali).</div>
+            </div>
+            <button id="claimInstallBtn" class="bonus-btn">Klaim</button>
+          </div>
+
+          <div id="missions" class="stack"></div>
+        </section>
+
+        <section class="page hidden" data-page="wheel">
+          <h2 class="page-title">Roda keberuntungan</h2>
+          <p class="muted small">Tonton iklan singkat, lalu putar rodanya.</p>
+          <div class="wheel-card">
+            <canvas id="wheelCanvas"></canvas>
+            <button id="spinBtn" class="primary big">Tonton iklan &amp; putar</button>
+            <div class="muted small center"><span id="spinsLeft">0</span> putaran tersisa hari ini</div>
+            <div id="wheelMsg" class="msg center"></div>
+          </div>
+          <div class="prize-grid" id="prizeGrid"></div>
+        </section>
+
+        <section class="page hidden" data-page="referral">
+          <h2 class="page-title">Ajak teman</h2>
+          <p class="muted small">Bagikan kode, kamu dan temanmu dapat coin.</p>
+          <div class="ref-card">
+            <div class="muted tiny">KODE REFERRAL KAMU</div>
+            <div id="refCode" class="ref-code">------</div>
+            <div class="ref-actions">
+              <button id="copyRef" class="ghost">Salin kode</button>
+              <button id="shareRef" class="primary">Bagikan link</button>
+            </div>
+            <div id="refMsg" class="msg center"></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="v" id="refInvited">0</div><div class="k">Teman diundang</div></div>
+            <div class="stat"><div class="v" id="refEarned">0</div><div class="k">Coin dari referral</div></div>
+          </div>
+          <div class="panel">
+            <h3>Hadiah</h3>
+            <ul class="reward-list" id="rewardList"></ul>
+          </div>
+          <div class="panel">
+            <h3>Teman yang kamu undang</h3>
+            <div id="refInvitees" class="stack"></div>
+          </div>
+        </section>
+
+        <section class="page hidden" data-page="wallet">
+          <h2 class="page-title">Dompet</h2>
+          <div class="mini-balance">Saldo <b id="walletCoin">0</b> coin <span class="muted">≈</span> <span id="walletIdr">Rp0</span></div>
+          <div class="panel">
+            <h3>Cairkan coin</h3>
+            <p class="muted tiny" id="wdHint"></p>
+            <div class="preset-row" id="presets"></div>
+            <form id="wdForm" class="form">
+              <label>Jumlah (Rupiah)
+                <input id="wdAmount" type="number" step="100" inputmode="numeric" required />
+              </label>
+              <label>Metode
+                <select id="wdMethod">
+                  <option value="ewallet">E-wallet</option>
+                  <option value="bank">Bank</option>
+                </select>
+              </label>
+              <label>Provider
+                <input id="wdProvider" type="text" maxlength="50" placeholder="DANA / OVO / BCA" required />
+              </label>
+              <label>Nama pemilik
+                <input id="wdName" type="text" maxlength="120" required />
+              </label>
+              <label>Nomor rekening / e-wallet
+                <input id="wdNumber" type="text" maxlength="50" inputmode="numeric" required />
+              </label>
+              <button type="submit" class="primary">Ajukan pencairan</button>
+              <p id="wdMsg" class="msg"></p>
+            </form>
+          </div>
+          <div class="panel"><h3>Riwayat</h3><div id="wdHistory" class="stack"></div></div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav">
+        <button class="nav-item active" data-tab="home">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+          <span>Main</span>
+        </button>
+        <button class="nav-item" data-tab="missions">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h10M9 12h10M9 19h10"/><path d="M4 5l1 1 2-2M4 12l1 1 2-2M4 19l1 1 2-2"/></svg>
+          <span>Misi</span>
+        </button>
+        <button class="nav-item" data-tab="wheel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/></svg>
+          <span>Roda</span>
+        </button>
+        <button class="nav-item" data-tab="referral">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M18 7v6M15 10h6"/></svg>
+          <span>Undang</span>
+        </button>
+        <button class="nav-item" data-tab="wallet">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2"/></svg>
+          <span>Dompet</span>
+        </button>
+      </nav>
+    </section>
+
+    <div id="adOverlay" class="ad-overlay hidden">
+      <div class="ad-box">
+        <div class="ad-label">Iklan berhadiah</div>
+        <div class="ad-visual">
+          <div class="ad-shine"></div>
+          <div class="ad-text">Slot iklan</div>
+          <div class="muted tiny">Ganti dengan jaringan iklan asli (AdMob/SSV) saat produksi.</div>
+        </div>
+        <div class="ad-count"><span id="adCount">5</span><small>detik</small></div>
+        <div class="ad-progress"><div id="adProgress"></div></div>
+        <p class="muted tiny center">Roda akan berputar otomatis setelah iklan selesai.</p>
+      </div>
+    </div>
+
+    <script src="/config.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b0f19" />
+    <title>Admin · Coin Quest</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="admin-wrap">
+      <div class="admin-head">
+        <div>
+          <h1 style="margin:0;font-size:22px">Dashboard Admin</h1>
+          <div id="status" class="muted small">Memuat...</div>
+        </div>
+        <div class="actions">
+          <button class="ghost" id="openGame">Buka game</button>
+          <button class="ghost" id="logout">Keluar</button>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card"><div class="k">Pemain online</div><div class="v" id="sOnline">0</div></div>
+        <div class="card"><div class="k">Total pemain</div><div class="v" id="sUsers">0</div></div>
+        <div class="card"><div class="k">Withdraw pending</div><div class="v" id="sPending">0</div></div>
+        <div class="card"><div class="k">Coin beredar</div><div class="v" id="sCoins">0</div></div>
+        <div class="card"><div class="k">Daftar hari ini</div><div class="v" id="sTodayUsers">0</div></div>
+        <div class="card"><div class="k">Ronde hari ini</div><div class="v" id="sTodayRounds">0</div></div>
+        <div class="card"><div class="k">Putaran roda</div><div class="v" id="sTodayWheel">0</div></div>
+        <div class="card"><div class="k">Coin hari ini</div><div class="v" id="sTodayEarned">0</div></div>
+      </div>
+
+      <div class="panel">
+        <h2>Pemain online</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nama</th><th>Email</th><th>Terakhir aktif</th></tr></thead>
+            <tbody id="onlineBody"><tr><td colspan="3" class="muted small">-</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <h2 style="margin:0">Pencairan</h2>
+          <select id="wdFilter" class="form" style="background:#131a2a;border:1px solid #232c42;color:#eaf0ff;padding:8px 12px;border-radius:10px">
+            <option value="">Semua</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
+            <option value="paid">Paid</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Pemain</th><th>Jumlah</th><th>Metode</th><th>Rekening</th><th>Status</th><th>Aksi</th></tr>
+            </thead>
+            <tbody id="wdBody"><tr><td colspan="7" class="muted small">-</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/admin.js"></script>
+  </body>
+</html>

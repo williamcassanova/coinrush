@@ -1,0 +1,18 @@
+{
+  "name": "Coin Rush",
+  "short_name": "Coin Rush",
+  "description": "Tangkap coin, putar roda, lalu cairkan hadiahnya.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070a12",
+  "theme_color": "#070a12",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

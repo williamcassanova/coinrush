@@ -1,0 +1,8 @@
+{
+  "appId": "com.coingame.coinrush",
+  "appName": "Coin Rush",
+  "webDir": "public",
+  "android": {
+    "allowMixedContent": false
+  }
+}
