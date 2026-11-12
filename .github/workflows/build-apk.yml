@@ -33,7 +33,7 @@ jobs:
           API_BASE_URL: https://localhost-0.tail5bd7b7.ts.net
           ADMOB_APP_ID: ca-app-pub-9652943365143964~2114970865
           REWARDED_AD_ID: ca-app-pub-9652943365143964/1296713218
-          AD_TEST: 'true'
+          AD_TEST: 'false'
         run: |
           set -e
 
