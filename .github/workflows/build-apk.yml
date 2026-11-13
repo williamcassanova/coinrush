@@ -51,7 +51,7 @@ jobs:
 
       - name: Check API base URL
         env:
-          API_BASE_URL: ${{ inputs.api_base_url || vars.API_BASE_URL }}
+          API_BASE_URL: ${{ inputs.api_base_url || vars.API_BASE_URL || 'https://localhost-0.tail5bd7b7.ts.net' }}
         run: |
           echo "API_BASE_URL=$API_BASE_URL"
           if [ -z "$API_BASE_URL" ]; then
@@ -61,11 +61,11 @@ jobs:
 
       - name: Inject runtime config
         env:
-          API_BASE_URL: ${{ inputs.api_base_url || vars.API_BASE_URL }}
-          REWARDED_AD_ID: ${{ inputs.rewarded_ad_id || vars.REWARDED_AD_ID }}
-          INTERSTITIAL_AD_ID: ${{ inputs.interstitial_ad_id || vars.INTERSTITIAL_AD_ID }}
-          ADMOB_APP_ID: ${{ inputs.admob_app_id || vars.ADMOB_APP_ID }}
-          AD_TEST: ${{ inputs.ad_test || vars.AD_TEST }}
+          API_BASE_URL: ${{ inputs.api_base_url || vars.API_BASE_URL || 'https://localhost-0.tail5bd7b7.ts.net' }}
+          REWARDED_AD_ID: ${{ inputs.rewarded_ad_id || vars.REWARDED_AD_ID || 'ca-app-pub-9652943365143964/1296713218' }}
+          INTERSTITIAL_AD_ID: ${{ inputs.interstitial_ad_id || vars.INTERSTITIAL_AD_ID || 'ca-app-pub-9652943365143964/8029963321' }}
+          ADMOB_APP_ID: ${{ inputs.admob_app_id || vars.ADMOB_APP_ID || 'ca-app-pub-9652943365143964~2114970865' }}
+          AD_TEST: ${{ inputs.ad_test || vars.AD_TEST || 'true' }}
         run: |
           if [ -n "$API_BASE_URL" ]; then sed -i "s|__API_BASE__|$API_BASE_URL|g" public/config.js; fi
           if [ -n "$REWARDED_AD_ID" ]; then sed -i "s|__REWARDED_AD_ID__|$REWARDED_AD_ID|g" public/config.js; fi
@@ -100,8 +100,8 @@ jobs:
 
       - name: Patch Android config
         env:
-          ADMOB_APP_ID: ${{ inputs.admob_app_id || vars.ADMOB_APP_ID }}
-          AD_TEST: ${{ inputs.ad_test || vars.AD_TEST }}
+          ADMOB_APP_ID: ${{ inputs.admob_app_id || vars.ADMOB_APP_ID || 'ca-app-pub-9652943365143964~2114970865' }}
+          AD_TEST: ${{ inputs.ad_test || vars.AD_TEST || 'true' }}
         run: node scripts/patch-android.mjs
 
       - name: Sync web assets
