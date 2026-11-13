@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "db:init": "node scripts/init-db.js"
+    "db:init": "node scripts/init-db.js",
+    "db:migrate": "node scripts/migrate-auth.js"
   },
   "engines": {
     "node": ">=18"

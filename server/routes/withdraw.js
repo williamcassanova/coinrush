@@ -12,17 +12,17 @@ const PROVIDER_MAX = 50;
 const NAME_MAX = 120;
 const ACCOUNT_MAX = 50;
 
-async function firstWithdrawEligible(userId) {
+async function withdrawalsToday(userId) {
   const rows = await query(
-    "SELECT COUNT(*) AS c FROM withdrawals WHERE user_id = ? AND status <> 'rejected'",
+    'SELECT COUNT(*) AS c FROM withdrawals WHERE user_id = ? AND DATE(created_at) = CURDATE()',
     [userId],
   );
-  return Number(rows[0]?.c || 0) === 0;
+  return Number(rows[0]?.c || 0);
 }
 
 router.get('/mine', requireAuth, async (req, res, next) => {
   try {
-    const [rows, eligible] = await Promise.all([
+    const [rows, today] = await Promise.all([
       query(
         `SELECT id, amount_idr, coin_amount, method, provider, account_name, account_number,
                 status, note, created_at
@@ -32,14 +32,17 @@ router.get('/mine', requireAuth, async (req, res, next) => {
           LIMIT 50`,
         [req.user.id],
       ),
-      firstWithdrawEligible(req.user.id),
+      withdrawalsToday(req.user.id),
     ]);
+
+    const max = config.maxWithdrawPerDay;
+
     res.json({
       withdrawals: rows,
-      firstWithdrawEligible: eligible,
+      withdrawalsToday: today,
+      maxWithdrawPerDay: max,
+      withdrawalsLeftToday: Math.max(0, max - today),
       presets: config.withdrawPresets,
-      firstWithdrawIdr: config.firstWithdrawIdr,
-      firstWithdrawProvider: config.firstWithdrawProvider,
       minWithdrawIdr: config.minWithdrawIdr,
       coinPerRupiah: config.coinPerRupiah,
       coinBalance: Number(req.user.coin_balance),
@@ -66,19 +69,9 @@ router.post('/', requireAuth, async (req, res, next) => {
     if (!name || name.length > NAME_MAX) return res.status(400).json({ error: 'Nama pemilik rekening tidak valid' });
     if (!number || number.length > ACCOUNT_MAX) return res.status(400).json({ error: 'Nomor rekening/e-wallet tidak valid' });
 
-    const eligible = await firstWithdrawEligible(req.user.id);
-    const isFirstSpecial = idr === config.firstWithdrawIdr;
-
-    if (isFirstSpecial) {
-      if (!eligible) {
-        return res.status(400).json({ error: `Penarikan Rp${config.firstWithdrawIdr} hanya untuk pencairan pertama` });
-      }
-      if (method !== 'ewallet' || prov.toUpperCase() !== config.firstWithdrawProvider) {
-        return res.status(400).json({ error: `Penarikan pertama Rp${config.firstWithdrawIdr} hanya via e-wallet ${config.firstWithdrawProvider}` });
-      }
-    } else if (idr < config.minWithdrawIdr) {
+    if (idr < config.minWithdrawIdr) {
       return res.status(400).json({
-        error: `Minimal withdraw Rp${config.minWithdrawIdr.toLocaleString('id-ID')} (atau Rp${config.firstWithdrawIdr} khusus pertama via ${config.firstWithdrawProvider})`,
+        error: `Minimal withdraw Rp${config.minWithdrawIdr.toLocaleString('id-ID')}`,
       });
     }
 
@@ -86,10 +79,26 @@ router.post('/', requireAuth, async (req, res, next) => {
 
     const result = await withTransaction(async (conn) => {
       const [rows] = await conn.query('SELECT coin_balance FROM users WHERE id = ? FOR UPDATE', [req.user.id]);
-      if (!rows.length) throw new Error('User tidak ditemukan');
+      if (!rows.length) {
+        const e = new Error('User tidak ditemukan');
+        e.code = 'USER_NOT_FOUND';
+        throw e;
+      }
       if (Number(rows[0].coin_balance) < coinCost) {
         const e = new Error('Saldo coin tidak cukup');
         e.code = 'INSUFFICIENT_BALANCE';
+        throw e;
+      }
+
+      const [wdRows] = await conn.query(
+        'SELECT COUNT(*) AS c FROM withdrawals WHERE user_id = ? AND DATE(created_at) = CURDATE()',
+        [req.user.id],
+      );
+      if (Number(wdRows[0]?.c || 0) >= config.maxWithdrawPerDay) {
+        const e = new Error(
+          `Batas penarikan harian tercapai (${config.maxWithdrawPerDay}x per hari)`,
+        );
+        e.code = 'DAILY_LIMIT';
         throw e;
       }
 
@@ -118,7 +127,9 @@ router.post('/', requireAuth, async (req, res, next) => {
 
     return res.json({ ok: true, withdrawalId: result.id, coinCost: result.coinCost, balance: result.balance });
   } catch (err) {
-    if (err.code === 'INSUFFICIENT_BALANCE') return res.status(400).json({ error: err.message });
+    if (['INSUFFICIENT_BALANCE', 'DAILY_LIMIT', 'USER_NOT_FOUND'].includes(err.code)) {
+      return res.status(400).json({ error: err.message });
+    }
     next(err);
   }
 });

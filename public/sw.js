@@ -1,4 +1,4 @@
-const CACHE = 'coinrush-v2';
+const CACHE = 'coinrush-v5';
 const ASSETS = [
   '/',
   '/index.html',
@@ -6,6 +6,7 @@ const ASSETS = [
   '/app.js',
   '/manifest.webmanifest',
   '/icon.svg',
+  '/privacy.html',
 ];
 
 self.addEventListener('install', (event) => {

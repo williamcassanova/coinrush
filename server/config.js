@@ -43,10 +43,9 @@ export const config = {
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
   coinPerRupiah: toInt(process.env.COIN_PER_RUPIAH, 100),
-  minWithdrawIdr: toInt(process.env.MIN_WITHDRAW_IDR, 20000),
-  firstWithdrawIdr: toInt(process.env.FIRST_WITHDRAW_IDR, 200),
-  firstWithdrawProvider: (process.env.FIRST_WITHDRAW_PROVIDER || 'DANA').toUpperCase(),
-  withdrawPresets: toList(process.env.WITHDRAW_PRESETS, [200, 20000, 50000, 100000, 200000]),
+  minWithdrawIdr: toInt(process.env.MIN_WITHDRAW_IDR, 1000),
+  maxWithdrawPerDay: toInt(process.env.MAX_WITHDRAW_PER_DAY, 1),
+  withdrawPresets: toList(process.env.WITHDRAW_PRESETS, [1000, 20000, 50000, 100000, 200000]),
   dailyCoinCap: toInt(process.env.DAILY_COIN_CAP, 50000),
   onlineWindowSeconds: toInt(process.env.ONLINE_WINDOW_SECONDS, 60),
   heartbeatSeconds: toInt(process.env.HEARTBEAT_SECONDS, 25),

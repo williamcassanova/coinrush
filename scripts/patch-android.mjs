@@ -13,12 +13,20 @@ if (!existsSync(manifestPath)) {
 
 const cfg = JSON.parse(readFileSync(configPath, 'utf8'));
 const appId = cfg.appId || 'com.coingame.coinrush';
-const admobAppId = process.env.ADMOB_APP_ID || 'ca-app-pub-9652943365143964~2114970865';
+const admobTest = process.env.AD_TEST !== 'false';
+const admobAppId =
+  process.env.ADMOB_APP_ID ||
+  (admobTest ? 'ca-app-pub-3940256099942544~3347511713' : 'ca-app-pub-9652943365143964~2114970865');
 
 let manifest = readFileSync(manifestPath, 'utf8');
 
 const admobMeta = `<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${admobAppId}" />`;
-if (!manifest.includes('com.google.android.gms.ads.APPLICATION_ID')) {
+if (manifest.includes('com.google.android.gms.ads.APPLICATION_ID')) {
+  manifest = manifest.replace(
+    /<meta-data\s+android:name="com\.google\.android\.gms\.ads\.APPLICATION_ID"\s+android:value="[^"]*"\s*\/>/,
+    admobMeta,
+  );
+} else {
   manifest = manifest.replace('</application>', `        ${admobMeta}\n    </application>`);
 }
 
@@ -44,10 +52,15 @@ writeFileSync(manifestPath, manifest);
 
 if (existsSync(stringsPath)) {
   let strings = readFileSync(stringsPath, 'utf8');
-  if (!strings.includes('name="admob_app_id"')) {
+  if (strings.includes('name="admob_app_id"')) {
+    strings = strings.replace(
+      /<string name="admob_app_id">[^<]*<\/string>/,
+      `<string name="admob_app_id">${admobAppId}</string>`,
+    );
+  } else {
     strings = strings.replace('</resources>', `    <string name="admob_app_id">${admobAppId}</string>\n</resources>`);
-    writeFileSync(stringsPath, strings);
   }
+  writeFileSync(stringsPath, strings);
 }
 
 console.log(`[patch] AndroidManifest siap (appId=${appId}, admob=${admobAppId})`);

@@ -18,8 +18,26 @@
         <h1>Coin <em>Rush</em></h1>
         <p class="muted">Tangkap coin, putar roda, lalu cairkan hadiahnya.</p>
         <div id="gsiButton" class="gsi"></div>
+        <div class="divider"><span>atau</span></div>
+        <div class="auth-tabs" role="tablist">
+          <button id="tabLogin" class="auth-tab active" type="button" role="tab" aria-selected="true">Masuk</button>
+          <button id="tabRegister" class="auth-tab" type="button" role="tab" aria-selected="false">Daftar</button>
+        </div>
+        <form id="authForm" class="form auth-form" novalidate>
+          <label id="nameField" class="hidden">Nama
+            <input id="authName" name="name" type="text" autocomplete="name" placeholder="Nama kamu" maxlength="150" />
+          </label>
+          <label>Email
+            <input id="authEmail" name="email" type="email" autocomplete="email" placeholder="email@contoh.com" maxlength="255" required />
+          </label>
+          <label>Password
+            <input id="authPassword" name="password" type="password" autocomplete="current-password" placeholder="Minimal 8 karakter" minlength="8" maxlength="128" required />
+          </label>
+          <button id="authSubmit" class="primary big" type="submit">Masuk</button>
+        </form>
         <p id="loginMsg" class="msg"></p>
-        <p class="muted tiny">Masuk dengan Google untuk menyimpan progres dan saldo.</p>
+        <p class="muted tiny">Masuk dengan Google, atau buat akun baru pakai email. Layanan hanya untuk 18+.</p>
+        <p class="muted tiny"><a href="/privacy.html" target="_blank" rel="noopener">Kebijakan Privasi</a></p>
       </div>
     </section>
 
@@ -138,7 +156,7 @@
             <div class="preset-row" id="presets"></div>
             <form id="wdForm" class="form">
               <label>Jumlah (Rupiah)
-                <input id="wdAmount" type="number" step="100" inputmode="numeric" required />
+                <input id="wdAmount" type="number" step="1000" inputmode="numeric" required />
               </label>
               <label>Metode
                 <select id="wdMethod">
@@ -157,6 +175,7 @@
               </label>
               <button type="submit" class="primary">Ajukan pencairan</button>
               <p id="wdMsg" class="msg"></p>
+              <p class="muted tiny">Hanya untuk 18+. Dengan mengajukan pencairan, kamu menyetujui <a href="/privacy.html" target="_blank" rel="noopener">Kebijakan Privasi</a>.</p>
             </form>
           </div>
           <div class="panel"><h3>Riwayat</h3><div id="wdHistory" class="stack"></div></div>

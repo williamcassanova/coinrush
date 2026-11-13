@@ -121,6 +121,51 @@ body {
   background: linear-gradient(120deg, var(--gold), var(--gold-2));
   box-shadow: 0 10px 26px rgba(255, 159, 26, 0.28);
 }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.divider::before,
+.divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--stroke);
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--stroke);
+}
+.auth-tab {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.auth-tab.active {
+  color: #4a3005;
+  background: linear-gradient(120deg, var(--gold), var(--gold-2));
+}
+
+.auth-form {
+  margin-top: 14px;
+  text-align: left;
+}
+.auth-form .primary {
+  width: 100%;
+}
 .msg { min-height: 16px; font-size: 13px; color: var(--gold); margin: 8px 0; }
 .msg.error { color: var(--red); }
 .msg.ok { color: var(--green); }

@@ -2,6 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { config } from './config.js';
 import { query, countOnline, pool } from './db.js';
 import { startOnlineReporter } from './telegram.js';
@@ -72,6 +73,16 @@ app.use('/api/withdraw', withdrawRouter);
 app.use('/api/wheel', wheelRouter);
 app.use('/api/referral', referralRouter);
 app.use('/api/admin', adminRouter);
+
+app.get(['/privacy', '/privacy.html'], async (_req, res) => {
+  try {
+    const html = await readFile(path.join(config.root, 'public/privacy.html'), 'utf8');
+    const contact = config.adminEmails[0] || 'support@coinrush.app';
+    res.type('html').send(html.replaceAll('__CONTACT_EMAIL__', contact));
+  } catch {
+    res.status(404).type('text').send('Kebijakan privasi tidak tersedia');
+  }
+});
 
 app.use(express.static(path.join(config.root, 'public'), { extensions: ['html'] }));
 

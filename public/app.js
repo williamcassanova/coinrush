@@ -3,11 +3,17 @@ const API_BASE = RAW_API_BASE.startsWith('__') ? '' : RAW_API_BASE;
 const API = `${API_BASE}/api`;
 const NATIVE = Boolean(window.Capacitor?.isNativePlatform?.());
 const RETURN_SCHEME = 'com.coingame.coinrush';
+const AD_TEST = window.CQ_AD_TEST !== false;
 const REWARDED_AD_ID = (() => {
   const v = String(window.CQ_REWARDED_AD_ID || '');
+  if (AD_TEST) return 'ca-app-pub-3940256099942544/5224354917';
   return !v || v.startsWith('__') ? 'ca-app-pub-3940256099942544/5224354917' : v;
 })();
-const AD_TEST = window.CQ_AD_TEST !== false;
+const INTERSTITIAL_AD_ID = (() => {
+  const v = String(window.CQ_INTERSTITIAL_AD_ID || '');
+  if (AD_TEST) return 'ca-app-pub-3940256099942544/1033173712';
+  return !v || v.startsWith('__') ? 'ca-app-pub-9652943365143964/8029963321' : v;
+})();
 const LS_TOKEN = 'cq_token';
 const LS_USER = 'cq_user';
 const LS_REF = 'cq_ref';
@@ -28,6 +34,7 @@ const fmt = (n) => Number(n || 0).toLocaleString('id-ID');
 
 let deferredInstallPrompt = null;
 let installedThisSession = false;
+let authMode = 'login';
 
 function isStandalone() {
   return (
@@ -255,6 +262,13 @@ function switchTab(name) {
   document.querySelectorAll('.page').forEach((p) => {
     p.classList.toggle('hidden', p.dataset.page !== name);
   });
+
+  if (currentPage && currentPage !== name) {
+    tabSwitchCount += 1;
+    if (tabSwitchCount % 2 === 0) showInterstitial();
+  }
+  currentPage = name;
+
   if (name === 'wheel') {
     ensureWheel();
     drawWheel(wheel.rotation);
@@ -530,6 +544,7 @@ async function finishRound() {
       ? `+${fmt(r.granted)} coin (sebagian tertahan batas harian)`
       : `+${fmt(r.granted)} coin dari ${caught} tangkapan`;
     await refreshMissions();
+    setTimeout(showInterstitial, 700);
   } catch (err) {
     $('playBtn').disabled = false;
     $('gameMsg').className = 'msg error';
@@ -768,7 +783,7 @@ async function showNativeRewarded() {
   let rewarded = false;
   let listener = null;
   try {
-    await AdMob.initialize({});
+    await initAds(AdMob);
     listener = await AdMob.addListener('onRewardedVideoAdReward', () => {
       rewarded = true;
     });
@@ -780,6 +795,66 @@ async function showNativeRewarded() {
     } catch {}
   }
   if (!rewarded) throw new Error('Iklan belum selesai. Coba lagi.');
+}
+
+let interstitialBusy = false;
+let interstitialReady = false;
+let lastInterstitialAt = 0;
+let tabSwitchCount = 0;
+let currentPage = null;
+let interstitialShown = 0;
+const INTERSTITIAL_COOLDOWN_MS = 60_000;
+const INTERSTITIAL_SESSION_MAX = 5;
+
+async function initAds(AdMob) {
+  try {
+    await AdMob.initialize({});
+    const info = await AdMob.requestConsentInfo();
+    if (info.isConsentFormAvailable && info.status === 'REQUIRED') {
+      await AdMob.showConsentForm();
+    }
+  } catch {
+    return;
+  }
+}
+
+async function preloadInterstitial() {
+  if (!NATIVE) return;
+  const AdMob = window.Capacitor?.Plugins?.AdMob;
+  if (!AdMob || interstitialBusy) return;
+  try {
+    await initAds(AdMob);
+    await AdMob.prepareInterstitial({ adId: INTERSTITIAL_AD_ID, isTesting: AD_TEST });
+    interstitialReady = true;
+  } catch {
+    interstitialReady = false;
+  }
+}
+
+async function showInterstitial() {
+  if (!NATIVE) return;
+  const AdMob = window.Capacitor?.Plugins?.AdMob;
+  if (!AdMob || interstitialBusy) return;
+  if (document.hidden) return;
+  if (Date.now() - lastInterstitialAt < INTERSTITIAL_COOLDOWN_MS) return;
+  if (interstitialShown >= INTERSTITIAL_SESSION_MAX) return;
+  if (typeof game !== 'undefined' && game.running) return;
+  interstitialBusy = true;
+  try {
+    await initAds(AdMob);
+    if (!interstitialReady) {
+      await AdMob.prepareInterstitial({ adId: INTERSTITIAL_AD_ID, isTesting: AD_TEST });
+    }
+    await AdMob.showInterstitial();
+    interstitialReady = false;
+    interstitialShown += 1;
+    lastInterstitialAt = Date.now();
+    setTimeout(preloadInterstitial, 1500);
+  } catch {
+    interstitialReady = false;
+  } finally {
+    interstitialBusy = false;
+  }
 }
 
 async function spinWheel() {
@@ -894,26 +969,22 @@ async function loadWithdrawals() {
 
 function renderPresets(data) {
   const row = $('presets');
-  const first = Number(data.firstWithdrawIdr || 200);
-  const eligible = Boolean(data.firstWithdrawEligible);
-  const options = [];
-  if (eligible) options.push(first);
-  for (const p of data.presets || []) {
-    if (eligible && Number(p) === first) continue;
-    options.push(Number(p));
-  }
+  const options = (data.presets || []).map(Number);
   row.innerHTML = options
-    .map(
-      (v) =>
-        `<button type="button" class="preset" data-amount="${v}">Rp${fmt(v)}${v === first && eligible ? ' <span class="muted tiny">pertama</span>' : ''}</button>`,
-    )
+    .map((v) => `<button type="button" class="preset" data-amount="${v}">Rp${fmt(v)}</button>`)
     .join('');
 
-  $('wdHint').textContent = eligible
-    ? `Pencairan pertama bisa Rp${fmt(first)} khusus ${data.firstWithdrawProvider} (e-wallet). Setelah itu minimal Rp${fmt(data.minWithdrawIdr)}.`
-    : `Minimal pencairan Rp${fmt(data.minWithdrawIdr)}.`;
+  const left = Number(data.withdrawalsLeftToday ?? 0);
+  const max = Number(data.maxWithdrawPerDay ?? 1);
+  const min = Number(data.minWithdrawIdr ?? 1000);
 
-  if (!eligible && Number($('wdAmount').value) === first) $('wdAmount').value = '';
+  $('wdHint').textContent =
+    left > 0
+      ? `Minimal Rp${fmt(min)}. Maksimal ${max}x penarikan per hari.`
+      : `Batas harian tercapai (${max}x per hari). Coba lagi besok.`;
+
+  const submit = $('wdForm').querySelector('button[type="submit"]');
+  if (submit) submit.disabled = left <= 0;
 }
 
 function renderWdHistory(items) {
@@ -944,9 +1015,20 @@ async function submitWithdraw(event) {
 
   const amountIdr = Number($('wdAmount').value);
   const kurs = store.config?.coinPerRupiah || 100;
+  const min = Number(store.withdraw?.minWithdrawIdr ?? store.config?.minWithdrawIdr ?? 1000);
   if (!Number.isInteger(amountIdr) || amountIdr <= 0) {
     msg.className = 'msg error';
     msg.textContent = 'Jumlah tidak valid';
+    return;
+  }
+  if (amountIdr < min) {
+    msg.className = 'msg error';
+    msg.textContent = `Minimal penarikan Rp${fmt(min)}`;
+    return;
+  }
+  if (Number(store.withdraw?.withdrawalsLeftToday ?? 1) <= 0) {
+    msg.className = 'msg error';
+    msg.textContent = 'Batas penarikan harian sudah tercapai.';
     return;
   }
   if (amountIdr * kurs > Number(store.user?.coinBalance || 0)) {
@@ -1034,6 +1116,21 @@ function waitForGoogle(timeoutMs = 12000) {
   });
 }
 
+async function completeAuth(data) {
+  store.token = data.token;
+  store.user = data.user;
+  store.config = data.config;
+  localStorage.setItem(LS_TOKEN, data.token);
+  localStorage.removeItem(LS_REF);
+  saveUser();
+  showApp();
+  await loadState();
+  $('loginMsg').textContent = '';
+  startHeartbeat();
+  preloadInterstitial();
+  switchTab('home');
+}
+
 async function handleCredential(response) {
   const msg = $('loginMsg');
   msg.className = 'msg';
@@ -1044,17 +1141,58 @@ async function handleCredential(response) {
       method: 'POST',
       body: JSON.stringify({ credential: response.credential, referralCode }),
     });
-    store.token = data.token;
-    store.user = data.user;
-    store.config = data.config;
-    localStorage.setItem(LS_TOKEN, data.token);
-    localStorage.removeItem(LS_REF);
-    saveUser();
+    await completeAuth(data);
+  } catch (err) {
+    msg.className = 'msg error';
+    msg.textContent = err.message;
+  }
+}
 
-    showApp();
-    await loadState();
-    msg.textContent = '';
-    startHeartbeat();
+function setAuthMode(mode) {
+  authMode = mode === 'register' ? 'register' : 'login';
+  const isRegister = authMode === 'register';
+  $('nameField').classList.toggle('hidden', !isRegister);
+  $('authSubmit').textContent = isRegister ? 'Daftar' : 'Masuk';
+  $('authPassword').autocomplete = isRegister ? 'new-password' : 'current-password';
+  $('tabLogin').classList.toggle('active', !isRegister);
+  $('tabRegister').classList.toggle('active', isRegister);
+  $('tabLogin').setAttribute('aria-selected', String(!isRegister));
+  $('tabRegister').setAttribute('aria-selected', String(isRegister));
+  $('loginMsg').textContent = '';
+  $('loginMsg').className = 'msg';
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  const msg = $('loginMsg');
+  msg.className = 'msg';
+  msg.textContent = '';
+
+  const email = $('authEmail').value.trim();
+  const password = $('authPassword').value;
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    msg.className = 'msg error';
+    msg.textContent = 'Email tidak valid';
+    return;
+  }
+  if (password.length < 8) {
+    msg.className = 'msg error';
+    msg.textContent = 'Password minimal 8 karakter';
+    return;
+  }
+
+  const body = { email, password };
+  if (authMode === 'register') {
+    body.name = $('authName').value.trim();
+    body.referralCode = localStorage.getItem(LS_REF) || undefined;
+  }
+
+  msg.textContent = authMode === 'register' ? 'Membuat akun...' : 'Masuk...';
+  try {
+    const path = authMode === 'register' ? '/auth/register' : '/auth/login';
+    const data = await api(path, { method: 'POST', body: JSON.stringify(body) });
+    await completeAuth(data);
   } catch (err) {
     msg.className = 'msg error';
     msg.textContent = err.message;
@@ -1132,6 +1270,7 @@ async function completeNativeLogin(url) {
   await loadState();
   $('loginMsg').textContent = '';
   startHeartbeat();
+  preloadInterstitial();
   switchTab('home');
 }
 
@@ -1154,6 +1293,10 @@ async function initNativeLinks() {
 
 function bindUi() {
   $('logout').addEventListener('click', logout);
+  $('authForm').addEventListener('submit', handleAuthSubmit);
+  $('tabLogin').addEventListener('click', () => setAuthMode('login'));
+  $('tabRegister').addEventListener('click', () => setAuthMode('register'));
+  setAuthMode('login');
   $('playBtn').addEventListener('click', startRound);
   $('spinBtn').addEventListener('click', spinWheel);
   $('copyRef').addEventListener('click', copyReferral);
@@ -1198,11 +1341,6 @@ function bindUi() {
     btn.classList.add('active');
     const amount = Number(btn.dataset.amount);
     $('wdAmount').value = String(amount);
-    const first = Number(store.withdraw?.firstWithdrawIdr || 200);
-    if (amount === first && store.withdraw?.firstWithdrawEligible) {
-      $('wdMethod').value = 'ewallet';
-      $('wdProvider').value = store.withdraw.firstWithdrawProvider;
-    }
   });
 
   document.querySelectorAll('.nav-item').forEach((b) => {
@@ -1260,6 +1398,7 @@ async function init() {
       renderUser();
       await loadState();
       startHeartbeat();
+      preloadInterstitial();
       switchTab('home');
       return;
     } catch {
